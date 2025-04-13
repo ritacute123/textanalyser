@@ -1,19 +1,38 @@
 import streamlit as st
-import pandas as pd
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForQuestionAnswering
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from langchain_community.llms import HuggingFacePipeline
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
 
-# Set up Streamlit
+# Page config
 st.set_page_config(page_title="Multilingual Text Analyzer", layout="centered")
 st.title("Multilingual Text Analyzer")
 st.caption("Developed by Dr. Tabine")
 
-text = st.text_area("Enter your text (any language):", height=250)
+# Load summarization model
+model_id = "philschmid/bart-large-cnn-samsum"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
+summarization_model = pipeline("summarization", model=model, tokenizer=tokenizer, device=-1)
 
-if st.button("Analyze") and text:
+# QA model
+qa_model = pipeline("question-answering", model="deepset/roberta-base-squad2", device=-1)
+
+summarizer = HuggingFacePipeline(pipeline=summarization_model)
+qa_llm = HuggingFacePipeline(pipeline=qa_model)
+
+summary_prompt = PromptTemplate.from_template("Summarize this:\n{text}")
+qa_prompt = PromptTemplate.from_template("Answer the question:\nContext: {context}\nQuestion: {question}")
+
+summary_chain = LLMChain(llm=summarizer, prompt=summary_prompt)
+qa_chain = LLMChain(llm=qa_llm, prompt=qa_prompt)
+
+# Input
+text = st.text_area("Enter your text (any language):", height=250)
+analyze = st.button("Analyze")
+
+if analyze and text:
     src_lang = detect_language(text)
     st.markdown(f"**Detected Language:** {src_lang.upper()}")
 
@@ -21,39 +40,28 @@ if st.button("Analyze") and text:
     st.markdown("**Translated Text:**")
     st.write(english_text)
 
-    # Summarization setup
-    model_id = "philschmid/bart-large-cnn-samsum"
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
-    summarizer = pipeline("summarization", model=model, tokenizer=tokenizer, device=-1)
-
-    # Run summary
-    summary = summarizer(english_text, max_length=130, min_length=30, do_sample=False)[0]['summary_text']
-    st.markdown("**Summary (Main Idea):**")
+    # Summary
+    summary = summary_chain.run(text=english_text)
+    st.markdown("**Main Idea Summary:**")
     st.write(summary)
 
-    # Estimate level
+    # CEFR/ILR Level + Justification
     level, justification = estimate_cefr_ilr(english_text)
     st.markdown(f"**Estimated CEFR / ILR Level:** {level}")
     st.markdown(f"**Justification:** {justification}")
 
-    # Extract vocab
-    blob_words = pd.Series(english_text.split())
-    top_words = blob_words.value_counts().head(10).reset_index()
-    top_words.columns = ["Term", "Frequency"]
-    top_words["English Translation"] = top_words["Term"]  # Placeholder for actual translations
+    # Vocabulary Table
+    from textblob import TextBlob
+    blob = TextBlob(english_text)
+    words = list(set(blob.words.lower()))
+    table_data = [{"Word": word, "Translation": translate_to_english(word, "en")} for word in words[:15]]
+    st.markdown("**Main Vocabulary with English Translation:**")
+    st.table(table_data)
 
-    st.markdown("**Top Vocabulary with English Translation:**")
-    st.dataframe(top_words)
-
-    # QA setup
-    qa_model_id = "deepset/roberta-base-squad2"
-    qa_pipeline = pipeline("question-answering", model=qa_model_id, tokenizer=qa_model_id, device=-1)
-
-    st.markdown("---")
+    # QA Interaction
     st.markdown("### Ask a question about the text:")
-    question = st.text_input("Your Question")
+    question = st.text_input("Type your question here:")
     if question:
-        answer = qa_pipeline(question=question, context=english_text)
+        answer = qa_chain.run(context=summary, question=question)
         st.markdown("**Answer:**")
-        st.write(answer['answer'])
+        st.write(answer)
