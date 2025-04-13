@@ -1,7 +1,12 @@
 streamlit
 transformers==4.38.2
 huggingface_hub
+langchain
+langchain-community
 python-dotenv
 nltk
+textblob
 langdetect
 deep-translator
+torch==2.2.2
+numpy==1.26.4
