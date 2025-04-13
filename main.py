@@ -8,8 +8,10 @@ import os
 
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
 
+# Load environment
 load_dotenv()
-login(token=os.getenv("HF_API_KEY"))
+hf_token = os.getenv("HF_API_KEY")  # Works locally with .env
+login(token=hf_token)
 
 text = input("Enter text (any language): ")
 
