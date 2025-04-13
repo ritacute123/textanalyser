@@ -8,7 +8,7 @@ import os
 
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
 
-# Load token from .env file
+# Load local .env token
 load_dotenv()
 hf_token = os.getenv("HF_API_KEY")
 if hf_token:
@@ -23,9 +23,9 @@ translated = translate_to_english(text, src_lang)
 print("\n[Translated to English]:")
 print(translated)
 
-# ✅ Safe model for summarization
+# ✅ Compatible summarization model
 summarizer = HuggingFacePipeline(
-    pipeline=pipeline("summarization", model="sshleifer/distilbart-cnn-12-6", device=-1)
+    pipeline=pipeline("summarization", model="philschmid/bart-large-cnn-samsum", device=-1)
 )
 summary_chain = LLMChain(llm=summarizer, prompt=PromptTemplate.from_template("Summarize:\n{text}"))
 summary = summary_chain.run(text=translated)
