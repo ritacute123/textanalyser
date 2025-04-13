@@ -1,4 +1,4 @@
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from langchain_community.llms import HuggingFacePipeline
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
@@ -8,7 +8,7 @@ import os
 
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
 
-# Load local .env token
+# Load token from .env file
 load_dotenv()
 hf_token = os.getenv("HF_API_KEY")
 if hf_token:
@@ -23,10 +23,13 @@ translated = translate_to_english(text, src_lang)
 print("\n[Translated to English]:")
 print(translated)
 
-# ✅ Compatible summarization model
-summarizer = HuggingFacePipeline(
-    pipeline=pipeline("summarization", model="philschmid/bart-large-cnn-samsum", device=-1)
-)
+# ✅ Manual model load for summarization (avoids infer_framework_load_model error)
+model_id = "philschmid/bart-large-cnn-samsum"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
+summarization_pipeline = pipeline("summarization", model=model, tokenizer=tokenizer)
+
+summarizer = HuggingFacePipeline(pipeline=summarization_pipeline)
 summary_chain = LLMChain(llm=summarizer, prompt=PromptTemplate.from_template("Summarize:\n{text}"))
 summary = summary_chain.run(text=translated)
 print("\n[Summary]")
