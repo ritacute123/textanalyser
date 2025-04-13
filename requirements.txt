@@ -8,3 +8,4 @@ nltk
 textblob
 langdetect
 deep-translator
+torch==2.2.2
