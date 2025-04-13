@@ -8,10 +8,8 @@ import os
 
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
 
-# Load environment
 load_dotenv()
-hf_token = os.getenv("HF_API_KEY")  # Works locally with .env
-login(token=hf_token)
+login(token=os.getenv("HF_API_KEY"))
 
 text = input("Enter text (any language): ")
 
@@ -22,7 +20,7 @@ translated = translate_to_english(text, src_lang)
 print("\n[Translated to English]")
 print(translated)
 
-summarizer = HuggingFacePipeline(pipeline=pipeline("summarization", model="facebook/bart-large-cnn"))
+summarizer = HuggingFacePipeline(pipeline=pipeline("summarization", model="sshleifer/distilbart-cnn-12-6"))
 summary_chain = LLMChain(llm=summarizer, prompt=PromptTemplate.from_template("Summarize:\n{text}"))
 summary = summary_chain.run(text=translated)
 print("\n[Summary]")
