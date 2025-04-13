@@ -12,7 +12,7 @@ def translate_to_english(text, src_lang):
 
 def estimate_cefr_ilr(text):
     """Estimate the ILR level based on the input text"""
-    # Example logic for estimation. You can replace this with actual logic for level estimation.
+    # Example logic for estimation. Replace with actual logic for level estimation.
     level = "ILR Level 2"
-    justification = "The text has basic vocabulary and simple sentence structures."
+    justification = "The text contains basic vocabulary and simple sentence structures."
     return level, justification
