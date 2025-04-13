@@ -1,5 +1,5 @@
 import streamlit as st
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from langchain_community.llms import HuggingFacePipeline
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
@@ -8,30 +8,37 @@ import os
 
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
 
-# Load Hugging Face token from secrets or env
+# Load Hugging Face token from secrets or environment
 hf_token = st.secrets.get("HF_API_KEY") or os.getenv("HF_API_KEY")
 if hf_token:
     login(token=hf_token)
 
+# Streamlit UI setup
 st.set_page_config(page_title="Multilingual Text Analyzer", layout="centered")
 st.title("Multilingual Text Analyzer")
 st.caption("Developed by Dr. Tabine")
 
-# ✅ Final summarization model (fully Streamlit-compatible)
-summarization_model = pipeline("summarization", model="philschmid/bart-large-cnn-samsum", device=-1)
+# ✅ Manually load summarization model (Cloud-safe)
+model_id = "philschmid/bart-large-cnn-samsum"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
+summarization_model = pipeline("summarization", model=model, tokenizer=tokenizer)
+
+# QA model
 qa_model = pipeline("question-answering", model="deepset/roberta-base-squad2", device=-1)
 
-# Wrap in LangChain
+# LangChain pipelines
 summarizer = HuggingFacePipeline(pipeline=summarization_model)
 qa_llm = HuggingFacePipeline(pipeline=qa_model)
 
+# Prompt templates
 summary_prompt = PromptTemplate.from_template("Summarize this:\n{text}")
 qa_prompt = PromptTemplate.from_template("Answer the question:\nContext: {context}\nQuestion: {question}")
 
 summary_chain = LLMChain(llm=summarizer, prompt=summary_prompt)
 qa_chain = LLMChain(llm=qa_llm, prompt=qa_prompt)
 
-# UI
+# Streamlit text input
 text = st.text_area("Enter your text (any language):", height=250)
 
 if text:
