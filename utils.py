@@ -34,6 +34,6 @@ def estimate_cefr_ilr(text):
     elif word_count < 500:
         level = "C1 / ILR 3"
     else:
-        level = "C2 / ILR 4-5"
+        level = "C2 / ILR 4–5"
 
     return level, justification
