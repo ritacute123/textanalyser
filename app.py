@@ -8,30 +8,32 @@ import os
 
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
 
-# Load Hugging Face token
+# Load Hugging Face token from secrets (for Streamlit Cloud) or local env
 hf_token = st.secrets.get("HF_API_KEY") or os.getenv("HF_API_KEY")
 login(token=hf_token)
 
-# Streamlit UI
+# Streamlit UI setup
 st.set_page_config(page_title="Multilingual Text Analyzer", layout="centered")
 st.title("Multilingual Text Analyzer")
 st.caption("Developed by Dr. Tabine")
 
-# Hugging Face models (compatible for Streamlit Cloud)
-summarization_model = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6", device=-1)
+# ✅ Use a compact, CPU-friendly summarizer
+summarization_model = pipeline("summarization", model="Falconsai/text_summarization", device=-1)
 qa_model = pipeline("question-answering", model="deepset/roberta-base-squad2", device=-1)
 
-# LangChain pipelines
+# Wrap pipelines with LangChain
 summarizer = HuggingFacePipeline(pipeline=summarization_model)
 qa_llm = HuggingFacePipeline(pipeline=qa_model)
 
+# Define prompt templates
 summary_prompt = PromptTemplate.from_template("Summarize this:\n{text}")
 qa_prompt = PromptTemplate.from_template("Answer the question:\nContext: {context}\nQuestion: {question}")
 
+# Create LangChain chains
 summary_chain = LLMChain(llm=summarizer, prompt=summary_prompt)
 qa_chain = LLMChain(llm=qa_llm, prompt=qa_prompt)
 
-# UI input
+# Streamlit input
 text = st.text_area("Enter your text (any language):", height=250)
 
 if text:
