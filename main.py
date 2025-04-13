@@ -1,51 +1,44 @@
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-from langchain_community.llms import HuggingFacePipeline
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from huggingface_hub import login
-from dotenv import load_dotenv
-import os
-
+from textblob import TextBlob
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
 
-# Load token from .env file
-load_dotenv()
-hf_token = os.getenv("HF_API_KEY")
-if hf_token:
-    login(token=hf_token)
+text = input("Enter your text in any language:\n")
 
-text = input("Enter text (any language): ")
+# 1. Detect & translate
+lang = detect_language(text)
+translated = translate_to_english(text, lang)
+print(f"\n[Detected Language]: {lang.upper()}")
+print(f"\n[Translated Text]:\n{translated}")
 
-src_lang = detect_language(text)
-print(f"\n[Detected Language]: {src_lang.upper()}")
-
-translated = translate_to_english(text, src_lang)
-print("\n[Translated to English]:")
-print(translated)
-
-# ✅ Manual model load for summarization (avoids infer_framework_load_model error)
+# 2. Summarize
 model_id = "philschmid/bart-large-cnn-samsum"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
-summarization_pipeline = pipeline("summarization", model=model, tokenizer=tokenizer)
+summarizer = pipeline("summarization", model=model, tokenizer=tokenizer, device=-1)
+summary = summarizer(translated, max_length=130, min_length=30, do_sample=False)[0]['summary_text']
+print(f"\n[Summary]:\n{summary}")
 
-summarizer = HuggingFacePipeline(pipeline=summarization_pipeline)
-summary_chain = LLMChain(llm=summarizer, prompt=PromptTemplate.from_template("Summarize:\n{text}"))
-summary = summary_chain.run(text=translated)
-print("\n[Summary]")
-print(summary)
-
+# 3. Estimate CEFR / ILR level
 level, justification = estimate_cefr_ilr(translated)
-print(f"\n[Estimated CEFR / ILR Level]: {level}")
+print(f"\n[CEFR / ILR Level]: {level}")
 print(f"[Justification]: {justification}")
 
-qa_model = HuggingFacePipeline(
-    pipeline=pipeline("question-answering", model="deepset/roberta-base-squad2", device=-1)
-)
-qa_chain = LLMChain(llm=qa_model, prompt=PromptTemplate.from_template("Answer:\nContext: {context}\nQuestion: {question}"))
+# 4. Vocabulary table
+print("\n[Main Vocabulary with English Translation]:")
+blob = TextBlob(translated)
+vocab = sorted(set(blob.words.lower()))[:10]
+for word in vocab:
+    try:
+        translation = translate_to_english(word, "en")
+    except:
+        translation = "N/A"
+    print(f"- {word} → {translation}")
 
-question = input("\nAsk a question about the text: ")
-if question:
-    answer = qa_chain.run(context=summary, question=question)
-    print("\n[Answer]")
-    print(answer)
+# 5. Interactive QA
+qa = pipeline("question-answering", model="deepset/roberta-base-squad2", device=-1)
+while True:
+    question = input("\nAsk a question about the text (or press Enter to exit): ")
+    if not question:
+        break
+    answer = qa(question=question, context=summary)
+    print("Answer:", answer['answer'])
