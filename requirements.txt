@@ -1,0 +1,10 @@
+streamlit
+transformers
+huggingface_hub
+langchain
+langchain-community
+python-dotenv
+nltk
+textblob
+langdetect
+deep-translator
