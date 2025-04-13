@@ -1,6 +1,6 @@
 import streamlit as st
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-from langchain_community.llms import HuggingFacePipeline
+from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
@@ -28,7 +28,7 @@ qa_prompt = PromptTemplate.from_template("Answer the question:\nContext: {contex
 summary_chain = LLMChain(llm=summarizer, prompt=summary_prompt)
 qa_chain = LLMChain(llm=qa_llm, prompt=qa_prompt)
 
-# Input
+# Streamlit input
 text = st.text_area("Enter your text (any language):", height=250)
 analyze = st.button("Analyze")
 
