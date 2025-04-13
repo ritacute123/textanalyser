@@ -8,20 +8,20 @@ import os
 
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
 
-# Load Hugging Face token (from secrets if running in Streamlit Cloud)
+# Load Hugging Face token
 hf_token = st.secrets.get("HF_API_KEY") or os.getenv("HF_API_KEY")
 login(token=hf_token)
 
-# Streamlit UI setup
+# Streamlit UI
 st.set_page_config(page_title="Multilingual Text Analyzer", layout="centered")
 st.title("Multilingual Text Analyzer")
 st.caption("Developed by Dr. Tabine")
 
-# Load models
-summarization_model = pipeline("summarization", model="facebook/bart-large-cnn", device=0)
-qa_model = pipeline("question-answering", model="deepset/roberta-base-squad2", device=0)
+# Hugging Face models (compatible for Streamlit Cloud)
+summarization_model = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6", device=-1)
+qa_model = pipeline("question-answering", model="deepset/roberta-base-squad2", device=-1)
 
-# Wrap in LangChain
+# LangChain pipelines
 summarizer = HuggingFacePipeline(pipeline=summarization_model)
 qa_llm = HuggingFacePipeline(pipeline=qa_model)
 
@@ -31,7 +31,7 @@ qa_prompt = PromptTemplate.from_template("Answer the question:\nContext: {contex
 summary_chain = LLMChain(llm=summarizer, prompt=summary_prompt)
 qa_chain = LLMChain(llm=qa_llm, prompt=qa_prompt)
 
-# Input
+# UI input
 text = st.text_area("Enter your text (any language):", height=250)
 
 if text:
