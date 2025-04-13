@@ -4,20 +4,36 @@ from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from utils import detect_language, translate_to_english, estimate_cefr_ilr
+import os
+
+# Ensure Hugging Face authentication is set
+hf_api_key = os.getenv("HF_API_KEY")
+if hf_api_key:
+    from huggingface_hub import login
+    login(token=hf_api_key)
 
 # Page config
 st.set_page_config(page_title="Multilingual Text Analyzer", layout="centered")
 st.title("Multilingual Text Analyzer")
 st.caption("Developed by Dr. Tabine")
 
-# Load summarization model
-model_id = "philschmid/bart-large-cnn-samsum"
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
-summarization_model = pipeline("summarization", model=model, tokenizer=tokenizer, device=-1)
+# Cache model to avoid reloading
+@st.cache_resource
+def load_summarization_model():
+    model_id = "philschmid/bart-large-cnn-samsum"
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
+    summarization_model = pipeline("summarization", model=model, tokenizer=tokenizer, device=-1)
+    return summarization_model
 
-# QA model
-qa_model = pipeline("question-answering", model="deepset/roberta-base-squad2", device=-1)
+@st.cache_resource
+def load_qa_model():
+    qa_model = pipeline("question-answering", model="deepset/roberta-base-squad2", device=-1)
+    return qa_model
+
+# Load models
+summarization_model = load_summarization_model()
+qa_model = load_qa_model()
 
 summarizer = HuggingFacePipeline(pipeline=summarization_model)
 qa_llm = HuggingFacePipeline(pipeline=qa_model)
